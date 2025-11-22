@@ -5,6 +5,7 @@ pipeline {
         DOCKERHUB_CREDENTIALS = 'dockerhub-creds'
         DOCKERHUB_USERNAME    = 'pragyasingh01'
         IMAGE_NAME            = 'devops-k8s-demo'
+        DOCKER_HOST           = "tcp://localhost:2375"
     }
 
     stages {
