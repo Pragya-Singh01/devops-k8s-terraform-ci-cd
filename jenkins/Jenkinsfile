@@ -1,10 +1,76 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKERHUB_CREDENTIALS = 'dockerhub-creds'
+        DOCKERHUB_USERNAME    = 'pragyasingh01'
+        IMAGE_NAME            = 'devops-k8s-demo'
+    }
+
     stages {
-        stage('Start') {
+
+        stage('Checkout') {
             steps {
-                echo "Pipeline connected successfully."
+                echo "Checking out source code..."
+                checkout scm
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh """
+                    echo 'Building Docker image...'
+                    docker build -t ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest .
+                    """
+                }
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                script {
+                    echo "Logging into Docker Hub..."
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: DOCKERHUB_CREDENTIALS,
+                            usernameVariable: 'USER',
+                            passwordVariable: 'PASS'
+                        )
+                    ]) {
+                        sh "echo \$PASS | docker login -u \$USER --password-stdin"
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    echo "Pushing image to Docker Hub..."
+                    sh "docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    echo "Applying Kubernetes manifests..."
+                    sh """
+                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/service.yaml
+                    """
+                }
+            }
+        }
+
+        stage('Restart Pods') {
+            steps {
+                script {
+                    echo "Restarting pod..."
+                    sh "kubectl rollout restart deployment/devops-demo-deployment"
+                }
             }
         }
     }
